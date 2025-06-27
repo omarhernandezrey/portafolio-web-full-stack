@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "verificar-funcionando": "./scripts/verificar-funcionando.sh",
+    "restaurar-funcionando": "./scripts/restaurar-funcionando.sh"
   },
   "dependencies": {
     "@react-three/drei": "^10.2.0",
@@ -22,7 +24,10 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/estree": "^1.0.8",
+    "@types/json-schema": "^7.0.15",
     "@types/node": "^20",
+    "@types/offscreencanvas": "^2019.7.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.177.0",
