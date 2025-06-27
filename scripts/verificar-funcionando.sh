@@ -21,13 +21,13 @@ if [ ! -f "src/types/jsx.d.ts" ]; then
     exit 1
 fi
 
-if [ ! -f "public/card.glb" ]; then
-    echo "❌ ERROR: card.glb no existe"
+if [ ! -f "public/Lanyard/card.glb" ]; then
+    echo "❌ ERROR: card.glb no existe en public/Lanyard/"
     exit 1
 fi
 
-if [ ! -f "public/lanyard.png" ]; then
-    echo "❌ ERROR: lanyard.png no existe"
+if [ ! -f "public/Lanyard/lanyard.png" ]; then
+    echo "❌ ERROR: lanyard.png no existe en public/Lanyard/"
     exit 1
 fi
 

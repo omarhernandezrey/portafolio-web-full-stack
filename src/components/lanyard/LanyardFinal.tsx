@@ -25,7 +25,7 @@ extend({ MeshLineGeometry, MeshLineMaterial });
 
 
 
-const cardGLB = "/card.glb";
+const cardGLB = "/Lanyard/card.glb";
 
 interface BandProps {
   maxSpeed?: number;
@@ -53,7 +53,64 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
   };
 
   const { nodes, materials } = useGLTF(cardGLB) as any;
-  const texture = useTexture("/lanyard.png");
+  const texture = useTexture("/Lanyard/lanyard.png");
+  
+  // 🎨 Texturas personalizadas del carnet de Omar
+  const [carnetFrontTexture, carnetBackTexture] = useTexture([
+    "/Lanyard/carnet1.png", // Cara frontal
+    "/Lanyard/carnet2.png"  // Cara trasera
+  ]);
+  
+  // 🔧 Configuración avanzada de texturas
+  useEffect(() => {
+    // Configurar textura frontal
+    carnetFrontTexture.flipY = false;
+    carnetFrontTexture.wrapS = carnetFrontTexture.wrapT = THREE.ClampToEdgeWrapping;
+    carnetFrontTexture.minFilter = THREE.LinearFilter;
+    carnetFrontTexture.magFilter = THREE.LinearFilter;
+    carnetFrontTexture.anisotropy = 16;
+    
+    // Configurar textura trasera
+    carnetBackTexture.flipY = false;
+    carnetBackTexture.wrapS = carnetBackTexture.wrapT = THREE.ClampToEdgeWrapping;
+    carnetBackTexture.minFilter = THREE.LinearFilter;
+    carnetBackTexture.magFilter = THREE.LinearFilter;
+    carnetBackTexture.anisotropy = 16;
+  }, [carnetFrontTexture, carnetBackTexture]);
+
+  // 🎨 Shader personalizado para control total de UV
+  const customShaderMaterial = (texture: THREE.Texture, flipH = false, flipV = false) => {
+    return new THREE.ShaderMaterial({
+      uniforms: {
+        map: { value: texture },
+        flipH: { value: flipH ? 1.0 : 0.0 },
+        flipV: { value: flipV ? 1.0 : 0.0 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D map;
+        uniform float flipH;
+        uniform float flipV;
+        varying vec2 vUv;
+        
+        void main() {
+          vec2 uv = vUv;
+          if (flipH > 0.5) uv.x = 1.0 - uv.x;
+          if (flipV > 0.5) uv.y = 1.0 - uv.y;
+          
+          vec4 color = texture2D(map, uv);
+          gl_FragColor = color;
+        }
+      `,
+      side: THREE.DoubleSide
+    });
+  };
   const [curve] = useState(
     () =>
       new THREE.CatmullRomCurve3([
@@ -274,16 +331,17 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
               }
             }}
           >
-            <mesh geometry={nodes.card.geometry}>
-              <meshPhysicalMaterial
-                map={materials.base.map}
-                map-anisotropy={16}
-                clearcoat={1}
-                clearcoatRoughness={0.15}
-                roughness={0.9}
-                metalness={0.8}
-              />
-            </mesh>
+            {/* 🎨 Carnet personalizado de Omar - Cara frontal con shader */}
+            <mesh 
+              geometry={nodes.card.geometry} 
+              material={customShaderMaterial(carnetFrontTexture, true, true)}
+            />
+            
+            {/* 🎨 Carnet personalizado de Omar - Cara trasera con shader */}
+            <mesh 
+              geometry={nodes.card.geometry} 
+              material={customShaderMaterial(carnetBackTexture, false, true)}
+            />
             <mesh
               geometry={nodes.clip.geometry}
               material={materials.metal}
