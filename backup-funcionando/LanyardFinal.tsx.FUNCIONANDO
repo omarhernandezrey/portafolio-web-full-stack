@@ -23,9 +23,7 @@ import { ThreePointerEvent } from "../../types/three-types";
 
 extend({ MeshLineGeometry, MeshLineMaterial });
 
-
-
-const cardGLB = "/card.glb";
+const cardGLB = "/Lanyard/card.glb";
 
 interface BandProps {
   maxSpeed?: number;
@@ -53,7 +51,32 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
   };
 
   const { nodes, materials } = useGLTF(cardGLB) as any;
-  const texture = useTexture("/lanyard.png");
+  const texture = useTexture("/Lanyard/lanyard.png");
+  
+  // 🎨 Texturas personalizadas del carnet
+  const [carnetFrontTexture, carnetBackTexture] = useTexture([
+    "/Lanyard/carnet1.png", // Cara frontal
+    "/Lanyard/carnet2.png"  // Cara trasera
+  ]);
+  
+  // 🔧 Configuración de texturas mejorada
+  useEffect(() => {
+    // Configurar textura frontal
+    carnetFrontTexture.flipY = false;
+    carnetFrontTexture.needsUpdate = true;
+    // En versiones más recientes de Three.js se usa colorSpace en lugar de encoding
+    if ('colorSpace' in carnetFrontTexture) {
+      (carnetFrontTexture as any).colorSpace = THREE.SRGBColorSpace;
+    }
+    
+    // Configurar textura trasera
+    carnetBackTexture.flipY = false;
+    carnetBackTexture.needsUpdate = true;
+    if ('colorSpace' in carnetBackTexture) {
+      (carnetBackTexture as any).colorSpace = THREE.SRGBColorSpace;
+    }
+  }, [carnetFrontTexture, carnetBackTexture]);
+
   const [curve] = useState(
     () =>
       new THREE.CatmullRomCurve3([
@@ -227,8 +250,8 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
         >
           <CuboidCollider args={[0.8, 1.125, 0.01]} />
           <group
-            scale={2.25}
-            position={[0, -1.2, -0.05]}
+            scale={2.75}
+            position={[0, -1.8, -0.05]}
             onPointerOver={() => hover(true)}
             onPointerOut={() => hover(false)}
             onPointerUp={(e: ThreePointerEvent) => {
@@ -274,16 +297,44 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
               }
             }}
           >
-            <mesh geometry={nodes.card.geometry}>
+            {/* 🎨 Cara FRONTAL - carnet1.png */}
+            <mesh 
+              geometry={nodes.card.geometry}
+              renderOrder={2}
+            >
               <meshPhysicalMaterial
-                map={materials.base.map}
-                map-anisotropy={16}
-                clearcoat={1}
-                clearcoatRoughness={0.15}
-                roughness={0.9}
-                metalness={0.8}
+                map={carnetFrontTexture}
+                clearcoat={0.8}
+                clearcoatRoughness={0.1}
+                roughness={0.3}
+                metalness={0.1}
+                side={THREE.FrontSide}
+                transparent={false}
+                depthWrite={true}
+                depthTest={true}
               />
             </mesh>
+            
+            {/* 🎨 Cara TRASERA - carnet2.png */}
+            <mesh 
+              geometry={nodes.card.geometry}
+              rotation={[0, Math.PI, 0]} // Rotar 180 grados en Y
+              renderOrder={1}
+            >
+              <meshPhysicalMaterial
+                map={carnetBackTexture}
+                clearcoat={0.8}
+                clearcoatRoughness={0.1}
+                roughness={0.3}
+                metalness={0.1}
+                side={THREE.FrontSide} // Cambiado a FrontSide con rotación
+                transparent={false}
+                depthWrite={true}
+                depthTest={true}
+              />
+            </mesh>
+            
+            {/* Clips y elementos metálicos */}
             <mesh
               geometry={nodes.clip.geometry}
               material={materials.metal}
@@ -310,7 +361,6 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
     </>
   );
 }
-
 
 interface LanyardProps {
   position?: [number, number, number];

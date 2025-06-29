@@ -23,8 +23,6 @@ import { ThreePointerEvent } from "../../types/three-types";
 
 extend({ MeshLineGeometry, MeshLineMaterial });
 
-
-
 const cardGLB = "/Lanyard/card.glb";
 
 interface BandProps {
@@ -55,62 +53,55 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
   const { nodes, materials } = useGLTF(cardGLB) as any;
   const texture = useTexture("/Lanyard/lanyard.png");
   
-  // 🎨 Texturas personalizadas del carnet de Omar
+  // 🎨 Texturas personalizadas del carnet
   const [carnetFrontTexture, carnetBackTexture] = useTexture([
     "/Lanyard/carnet1.png", // Cara frontal
     "/Lanyard/carnet2.png"  // Cara trasera
   ]);
   
-  // 🔧 Configuración avanzada de texturas
+  // 🔧 Configuración de texturas mejorada
   useEffect(() => {
     // Configurar textura frontal
     carnetFrontTexture.flipY = false;
-    carnetFrontTexture.wrapS = carnetFrontTexture.wrapT = THREE.ClampToEdgeWrapping;
+    carnetFrontTexture.needsUpdate = true;
+    carnetFrontTexture.wrapS = THREE.ClampToEdgeWrapping;
+    carnetFrontTexture.wrapT = THREE.ClampToEdgeWrapping;
+    
+    // Hacer la imagen un poquitito más pequeña y estirada hacia abajo
+    const frontScale = 1.7; // Escala horizontal (un poco más pequeña)
+    const frontScaleY = 1.3; // Escala vertical (menor = más estirada hacia abajo)
+    carnetFrontTexture.repeat.set(frontScale, frontScaleY);
+    carnetFrontTexture.offset.set(0.08, -0.002); // Ajuste casi imperceptible hacia arriba
+    
+    // Ajustar el brillo y contraste de la textura
     carnetFrontTexture.minFilter = THREE.LinearFilter;
     carnetFrontTexture.magFilter = THREE.LinearFilter;
-    carnetFrontTexture.anisotropy = 16;
+    
+    if ('colorSpace' in carnetFrontTexture) {
+      (carnetFrontTexture as any).colorSpace = THREE.SRGBColorSpace;
+    }
     
     // Configurar textura trasera
     carnetBackTexture.flipY = false;
-    carnetBackTexture.wrapS = carnetBackTexture.wrapT = THREE.ClampToEdgeWrapping;
+    carnetBackTexture.needsUpdate = true;
+    carnetBackTexture.wrapS = THREE.ClampToEdgeWrapping;
+    carnetBackTexture.wrapT = THREE.ClampToEdgeWrapping;
+    
+    // Hacer la imagen un poquitito más pequeña y estirada hacia abajo
+    const backScale = 1.7; // Escala horizontal (un poco más pequeña)
+    const backScaleY = 1.3; // Escala vertical (menor = más estirada hacia abajo)
+    carnetBackTexture.repeat.set(backScale, backScaleY);
+    carnetBackTexture.offset.set(0.08, -0.002); // Ajuste casi imperceptible hacia arriba
+    
+    // Ajustar el brillo y contraste de la textura
     carnetBackTexture.minFilter = THREE.LinearFilter;
     carnetBackTexture.magFilter = THREE.LinearFilter;
-    carnetBackTexture.anisotropy = 16;
+    
+    if ('colorSpace' in carnetBackTexture) {
+      (carnetBackTexture as any).colorSpace = THREE.SRGBColorSpace;
+    }
   }, [carnetFrontTexture, carnetBackTexture]);
 
-  // 🎨 Shader personalizado para control total de UV
-  const customShaderMaterial = (texture: THREE.Texture, flipH = false, flipV = false) => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        map: { value: texture },
-        flipH: { value: flipH ? 1.0 : 0.0 },
-        flipV: { value: flipV ? 1.0 : 0.0 }
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D map;
-        uniform float flipH;
-        uniform float flipV;
-        varying vec2 vUv;
-        
-        void main() {
-          vec2 uv = vUv;
-          if (flipH > 0.5) uv.x = 1.0 - uv.x;
-          if (flipV > 0.5) uv.y = 1.0 - uv.y;
-          
-          vec4 color = texture2D(map, uv);
-          gl_FragColor = color;
-        }
-      `,
-      side: THREE.DoubleSide
-    });
-  };
   const [curve] = useState(
     () =>
       new THREE.CatmullRomCurve3([
@@ -147,7 +138,6 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
                  (navigator.maxTouchPoints > 0));
     };
 
-    // Prevenir zoom y scroll durante interacciones en móviles
     const preventDefaultTouch = (e: TouchEvent) => {
       if (isMobile && dragged) {
         e.preventDefault();
@@ -163,7 +153,6 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
 
     window.addEventListener("resize", handleResize);
     if (isMobile) {
-      // Solo prevenir durante drag activo
       document.addEventListener('touchmove', preventDefaultTouch, { passive: false });
       document.addEventListener('wheel', preventDefaultWheel, { passive: false });
     }
@@ -305,13 +294,11 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
                 try { e.nativeEvent.preventDefault(); } catch {}
               }
               
-              // Asegurar que el elemento capture el pointer
               if (e.target?.setPointerCapture) {
                 const pointerId = e.pointerId ?? e.nativeEvent?.pointerId ?? 0;
                 e.target.setPointerCapture(pointerId);
               }
               
-              // Calcular offset para touch/mouse
               if (card.current) {
                 const cardPosition = card.current.translation();
                 drag(
@@ -322,7 +309,6 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
               }
             }}
             onPointerMove={(e: ThreePointerEvent) => {
-              // Prevenir scroll en móviles durante drag
               if (dragged) {
                 e.stopPropagation?.();
                 if (e.nativeEvent && !e.nativeEvent.defaultPrevented) {
@@ -331,17 +317,37 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
               }
             }}
           >
-            {/* 🎨 Carnet personalizado de Omar - Cara frontal con shader */}
+            {/* Cara FRONTAL */}
             <mesh 
-              geometry={nodes.card.geometry} 
-              material={customShaderMaterial(carnetFrontTexture, true, true)}
-            />
+              geometry={nodes.card.geometry}
+              renderOrder={2}
+            >
+              <meshBasicMaterial
+                map={carnetFrontTexture}
+                side={THREE.FrontSide}
+                transparent={false}
+                depthWrite={true}
+                depthTest={true}
+                toneMapped={false}
+              />
+            </mesh>
             
-            {/* 🎨 Carnet personalizado de Omar - Cara trasera con shader */}
+            {/* Cara TRASERA */}
             <mesh 
-              geometry={nodes.card.geometry} 
-              material={customShaderMaterial(carnetBackTexture, false, true)}
-            />
+              geometry={nodes.card.geometry}
+              rotation={[0, Math.PI, 0]}
+              renderOrder={1}
+            >
+              <meshBasicMaterial
+                map={carnetBackTexture}
+                side={THREE.FrontSide}
+                transparent={false}
+                depthWrite={true}
+                depthTest={true}
+                toneMapped={false}
+              />
+            </mesh>
+            
             <mesh
               geometry={nodes.clip.geometry}
               material={materials.metal}
@@ -368,7 +374,6 @@ function Band({ maxSpeed = 50, minSpeed = 0 }: BandProps) {
     </>
   );
 }
-
 
 interface LanyardProps {
   position?: [number, number, number];
@@ -401,8 +406,8 @@ export default function LanyardFinal({
     <div 
       className="relative z-0 w-full h-screen flex justify-center items-center transform scale-100 origin-center"
       style={{
-        touchAction: 'none', // Prevenir gestos del navegador en móviles
-        userSelect: 'none',  // Prevenir selección de texto
+        touchAction: 'none',
+        userSelect: 'none',
         WebkitUserSelect: 'none',
         WebkitTouchCallout: 'none'
       }}
@@ -411,27 +416,27 @@ export default function LanyardFinal({
         camera={{ position, fov }}
         gl={{ 
           alpha: transparent,
-          antialias: !isMobileDevice, // Desactivar antialiasing en móviles para mejor performance
+          antialias: !isMobileDevice,
           preserveDrawingBuffer: false,
           powerPreference: isMobileDevice ? "low-power" : "high-performance"
         }}
         onCreated={({ gl }) => {
           gl.setClearColor(new THREE.Color(0x000000), transparent ? 0 : 1);
-          // Mejor configuración de pixelRatio para móviles
           gl.setPixelRatio(Math.min(window.devicePixelRatio, isMobileDevice ? 1.5 : 2));
           
-          // Configurar touchAction para móviles
           if (isMobileDevice && gl.domElement) {
             gl.domElement.style.touchAction = 'none';
           }
         }}
       >
-        <ambientLight intensity={Math.PI} />
+        <ambientLight intensity={1.2} />
+        <directionalLight position={[0, 5, 5]} intensity={0.8} />
+        <directionalLight position={[5, 5, -5]} intensity={0.5} />
+        <pointLight position={[0, 0, 10]} intensity={0.6} />
         <Physics 
           gravity={gravity} 
           timeStep={1 / 60} 
           paused={false}
-          // Configuración optimizada para móviles
           numSolverIterations={isMobileDevice ? 4 : 8}
           numAdditionalFrictionIterations={isMobileDevice ? 2 : 4}
         >
@@ -439,28 +444,28 @@ export default function LanyardFinal({
         </Physics>
         <Environment blur={0.75}>
           <Lightformer
-            intensity={2}
+            intensity={0.3}
             color="white"
             position={[0, -1, 5]}
             rotation={[0, 0, Math.PI / 3]}
             scale={[100, 0.1, 1]}
           />
           <Lightformer
-            intensity={3}
+            intensity={0.3}
             color="white"
             position={[-1, -1, 1]}
             rotation={[0, 0, Math.PI / 3]}
             scale={[100, 0.1, 1]}
           />
           <Lightformer
-            intensity={3}
+            intensity={0.3}
             color="white"
             position={[1, 1, 1]}
             rotation={[0, 0, Math.PI / 3]}
             scale={[100, 0.1, 1]}
           />
           <Lightformer
-            intensity={10}
+            intensity={1}
             color="white"
             position={[-10, 0, 14]}
             rotation={[0, Math.PI / 2, Math.PI / 3]}
